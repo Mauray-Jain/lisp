@@ -1,11 +1,15 @@
 open Lisp
 
+let print_sexp s =
+    match s with
+    | Types.Fixnum(num) -> print_int num
+    | Types.Boolean(b) -> print_string (if b then "#t" else "#f");;
+
 let rec repl stm =
     print_string "> ";
     flush stdout;
-    let Types.Fixnum(v) = Parser.read_sexp stm in
-    print_string "Your int: ";
-    print_int v;
+    let sexp = Parser.read_sexp stm in
+    print_sexp sexp;
     print_newline ();
     repl stm;;
 
