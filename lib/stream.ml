@@ -22,6 +22,10 @@ let is_whitespace c =
 let is_digit c =
     '0' <= c && c <= '9';;
 
+let is_alpha = function
+    | 'A'..'Z' | 'a'..'z' -> true
+    | _ -> false;;
+
 let rec eat_whitespace stm =
     let c = read_char stm in
     if is_whitespace c then
