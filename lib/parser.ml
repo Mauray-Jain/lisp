@@ -1,42 +1,62 @@
+open Types
+open Stream
+
 let string_of_char c =
     String.make 1 c;;
 
-let rec read_fixnum stm acc =
-    let nc = Stream.read_char stm in
-    if Stream.is_digit nc then
-        read_fixnum stm (acc ^ Char.escaped nc)
-    else
-        let _ = Stream.unread_char stm nc in
-        Types.Fixnum (int_of_string acc);;
-
 let is_symstartchar = function
     | '*'|'/'|'>'|'<'|'='|'?'|'!'|'-'|'+' -> true
-    | c -> Stream.is_alpha c
+    | c -> is_alpha c;;
 
-let rec read_symbol stm =
-    let is_delimiter = function
-        | '(' | ')' | '{' | '}' | ';' | '"' -> true
-        | c -> Stream.is_whitespace c
+let rec read_sexp stm =
+    let rec read_fixnum stm acc =
+        let nc = read_char stm in
+        if is_digit nc then
+            read_fixnum stm (acc ^ Char.escaped nc)
+        else
+            let _ = unread_char stm nc in
+            Fixnum (int_of_string acc)
     in
-    let nc = Stream.read_char stm in
-    if is_delimiter nc then
-        let _ = Stream.unread_char stm nc in ""
-    else
-        string_of_char nc ^ read_symbol stm
 
-let read_sexp stm =
-    Stream.eat_whitespace stm;
-    let c = Stream.read_char stm in
-    let peek_char = Stream.read_char stm in
-    Stream.unread_char stm peek_char;
-    if Stream.is_digit c || (c = '-' && (Stream.is_digit peek_char)) then
+    let rec read_symbol stm =
+        let is_delimiter = function
+            | '(' | ')' | '{' | '}' | ';' | '"' -> true
+            | c -> is_whitespace c
+        in
+        let nc = read_char stm in
+        if is_delimiter nc then
+            let _ = unread_char stm nc in ""
+        else
+            string_of_char nc ^ read_symbol stm
+    in
+
+    let rec read_list stm =
+        eat_whitespace stm;
+        let c = read_char stm in
+        if c = ')' then
+            Nil
+        else
+            let _ = unread_char stm c in
+            let car = read_sexp stm in
+            let cdr = read_list stm in
+            Pair(car, cdr)
+    in
+
+    eat_whitespace stm;
+    let c = read_char stm in
+    let peek_char = read_char stm in
+    unread_char stm peek_char;
+
+    if is_digit c || (c = '-' && (is_digit peek_char)) then
         read_fixnum stm (Char.escaped c)
     else if c = '#' then
-        match Stream.read_char stm with
-        | 't' -> Types.Boolean (true)
-        | 'f' -> Types.Boolean (false)
-        | x -> raise (Types.SyntaxErr ("Invalid boolean literal #" ^ (Char.escaped x)))
+        match read_char stm with
+        | 't' -> Boolean (true)
+        | 'f' -> Boolean (false)
+        | x -> raise (SyntaxErr ("Invalid boolean literal #" ^ (Char.escaped x)))
     else if is_symstartchar c then
-        Types.Symbol (string_of_char c ^ read_symbol stm)
+        Symbol (string_of_char c ^ read_symbol stm)
+    else if c = '(' then
+        read_list stm
     else
-        raise (Types.SyntaxErr ("Unexpected character: " ^ (Char.escaped c)));;
+        raise (SyntaxErr ("Unexpected character: " ^ (Char.escaped c)));;
