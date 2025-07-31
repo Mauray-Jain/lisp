@@ -1,6 +1,6 @@
 open Types
 
-exception NotFound of string;;
+exception NotFound of string
 
 let rec lookup (n, e) =
     match e with

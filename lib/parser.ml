@@ -2,11 +2,11 @@ open Types
 open Stream
 
 let string_of_char c =
-    String.make 1 c;;
+    String.make 1 c
 
 let is_symstartchar = function
     | '*'|'/'|'>'|'<'|'='|'?'|'!'|'-'|'+' -> true
-    | c -> is_alpha c;;
+    | c -> is_alpha c
 
 let rec read_sexp stm =
     let rec read_fixnum stm acc =
@@ -59,4 +59,4 @@ let rec read_sexp stm =
     else if c = '(' then
         read_list stm
     else
-        raise (SyntaxErr ("Unexpected character: " ^ (Char.escaped c)));;
+        raise (SyntaxErr ("Unexpected character: " ^ (Char.escaped c)))

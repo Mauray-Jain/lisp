@@ -4,6 +4,7 @@ type lobject =
     | Symbol of string
     | Nil
     | Pair of lobject * lobject
+    | Primitive of string * (lobject list -> lobject)
 
 exception SyntaxErr of string
 exception ThisCan'tHappenError
@@ -43,5 +44,6 @@ let rec print_sexp s =
             print_list s
         else
             print_pair s;
-        print_string ")";;
+        print_string ")"
+    | Primitive(name, _) -> print_string ("#<primitive:" ^ name ^ ">")
 

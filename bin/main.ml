@@ -7,8 +7,8 @@ let rec repl stm env =
     let (result, env') = Evaler.eval_sexp sexp env in
     Types.print_sexp result;
     print_newline ();
-    repl stm env';;
+    repl stm env'
 
 let () =
     let stm: Stream.stream = { chr=[]; line_num=1; chan=stdin } in
-    repl stm Types.Nil;;
+    repl stm Evaler.basis
