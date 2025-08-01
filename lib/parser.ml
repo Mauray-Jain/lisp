@@ -39,7 +39,7 @@ let rec read_sexp stm =
             let _ = unread_char stm c in
             let car = read_sexp stm in
             let cdr = read_list stm in
-            Pair(car, cdr)
+            Pair (car, cdr)
     in
 
     eat_whitespace stm;
@@ -58,5 +58,7 @@ let rec read_sexp stm =
         Symbol (string_of_char c ^ read_symbol stm)
     else if c = '(' then
         read_list stm
+    else if c = '\'' then
+        Quote (read_sexp stm)
     else
         raise (SyntaxErr ("Unexpected character: " ^ (Char.escaped c)))

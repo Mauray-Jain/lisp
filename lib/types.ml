@@ -5,6 +5,7 @@ type lobject =
     | Nil
     | Pair of lobject * lobject
     | Primitive of string * (lobject list -> lobject)
+    | Quote of value
 and value = lobject
 and name = string
 and exp =
@@ -26,11 +27,11 @@ exception ThisCan'tHappenError
 let rec pair_to_list pr =
     match pr with
     | Nil -> []
-    | Pair(a, b) -> a::(pair_to_list b)
+    | Pair (a, b) -> a::(pair_to_list b)
     | _ -> raise ThisCan'tHappenError
 
 let rec is_list pr =
     match pr with
     | Nil -> true
-    | Pair(_, b) -> is_list b
+    | Pair (_, b) -> is_list b
     | _ -> false
