@@ -11,48 +11,58 @@ let basis =
         | [a; b] -> Pair(a, b)
         | _ -> raise (TypeError "(pair a b)")
     in
+    let rec prim_list = function
+        | [] -> Nil
+        | a::b -> Pair(a, prim_list b)
+    in
     let new_prim acc (name, func) =
         Env.bind (name, Primitive(name, func), acc)
     in
     List.fold_left new_prim Nil [
         ("+", prim_plus);
-        ("pair", prim_pair)
+        ("pair", prim_pair);
+        ("list", prim_list)
     ]
 
-let rec eval_sexp sexp env =
-    let eval_if cond iftrue iffalse =
-        let (condval, _) = eval_sexp cond env in
-        match condval with
-        | Boolean(true) -> iftrue
-        | Boolean(false) -> iffalse
-        | _ -> raise (TypeError "(if bool e1 e2)")
+let evalexp exp env =
+    let evalapply f es =
+        match f with
+        | Primitive(_, f) -> f es
+        | _ -> raise (TypeError "(apply prim '(args)) or (prim args)")
     in
-    match sexp with
-    | Fixnum(v) -> Fixnum(v), env
-    | Boolean(v) -> Boolean(v), env
-    | Symbol(v) -> Env.lookup (v, env), env
-    | Nil -> Nil, env
-    | Primitive(n, f) -> Primitive(n, f), env
-    | Pair(_, _) when is_list sexp ->
-        (
-            match pair_to_list sexp with
-            | [Symbol "if"; cond; iftrue; iffalse] ->
-                fst (eval_sexp (eval_if cond iftrue iffalse) env), env
-            | [Symbol "env"] -> env, env
-            | [Symbol "val"; Symbol name; value] ->
-                let (result, _) = eval_sexp value env in
-                let env' = Env.bind (name, result, env) in
-                result, env'
-            | (Symbol fn)::args ->
-                let func = eval_sexp (Symbol fn) env in
-                (*Evaluate the arguments*)
-                let eval_arg e = fst (eval_sexp e env) in
-                let argvals = List.map eval_arg args in
-                (
-                    match func with
-                    | Primitive(_, f), _ -> (f argvals, env)
-                    | _ -> raise (TypeError "(apply func args)")
-                )
-            | _ -> sexp, env
-        )
-    | _ -> sexp, env
+    let rec ev = function
+        | Literal l -> l
+        | Var n -> Env.lookup (n, env)
+        | If(c, t, _) when ev c = Boolean true -> ev t
+        | If(c, _, f) when ev c = Boolean false -> ev f
+        | If _ -> raise (TypeError "(if bool e1 e2)")
+        | And(c1, c2) ->
+            begin
+                match (ev c1, ev c2) with
+                | (Boolean v1, Boolean v2) -> Boolean (v1 && v2)
+                | _ -> raise (TypeError "(and bool bool)")
+            end
+        | Or(c1, c2) ->
+            begin
+                match (ev c1, ev c2) with
+                | (Boolean v1, Boolean v2) -> Boolean (v1 || v2)
+                | _ -> raise (TypeError "(or bool bool)")
+            end
+        | Apply(fn, e) -> evalapply (ev fn) (pair_to_list (ev e))
+        | Call(Var "env", []) -> env
+        | Call(fn, args) -> evalapply (ev fn) (List.map ev args)
+        | Defexp _ -> raise ThisCan'tHappenError
+    in
+    ev exp
+
+let evaldef defexp env =
+    match defexp with
+    | Val(name, exp) ->
+        let v = evalexp exp env in
+        (v, Env.bind (name, v, env))
+    | Exp e -> evalexp e env, env
+
+let eval ast env =
+    match ast with
+    | Defexp d -> evaldef d env
+    | e -> evalexp e env, env
