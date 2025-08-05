@@ -1,12 +1,23 @@
-open Types
-
 exception NotFound of string
+exception UnspecifiedValue of string
 
-let rec lookup (n, e) =
-    match e with
-    | Nil -> raise (NotFound n)
-    | Pair (Pair (Symbol n', v), rst) ->
-        if n = n' then v else lookup (n, rst)
-    | _ -> raise ThisCan'tHappenError
+type 'a env = (string * 'a option ref) list
 
-let bind (n, v, e) = Pair (Pair (Symbol n, v), e)
+let bind (n, v, e) = (n, ref (Some v))::e
+
+let mkloc () = ref None
+
+let bindloc : string * 'a option ref * 'a env -> 'a env = fun (n, vor, e) -> (n, vor)::e
+
+let bindlist ns vs env =
+    List.fold_left2 (fun acc n v -> bind (n, v, acc)) env ns vs
+
+let rec lookup = function
+    | (n, []) -> raise (NotFound n)
+    | (n, (n', v)::_) when n = n' ->
+        begin
+            match !v with
+            | Some v -> v
+            | None -> raise (UnspecifiedValue n)
+        end
+    | (n, (_, _)::e) -> lookup (n, e)

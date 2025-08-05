@@ -4,7 +4,6 @@ let rec repl stm env =
     print_string "> ";
     flush stdout;
     let ast = Parser.read_sexp stm |> Ast.build_ast in
-    print_endline (Ast.string_exp ast);
     let (result, env') = Evaler.eval ast env in
     print_endline (Ast.string_val result);
     repl stm env'
