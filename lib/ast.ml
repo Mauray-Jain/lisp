@@ -1,6 +1,14 @@
 open Types
 
 let rec build_ast sexp =
+    let rec cond_to_ifs = function
+        | [] -> Literal (Symbol "error")
+        | Pair (Symbol "else", Pair (res, Nil))::[] ->
+            If (build_ast (Boolean true), build_ast res, cond_to_ifs [])
+        | Pair (cond, Pair (res, Nil))::condpairs ->
+            If (build_ast cond, build_ast res, cond_to_ifs condpairs)
+        | _ -> raise (TypeError "(cond conditions)")
+    in
     match sexp with
     | Primitive _ -> raise ThisCan'tHappenError
     | Nil | Fixnum _ | Boolean _ | Quote _ -> Literal sexp
@@ -11,6 +19,7 @@ let rec build_ast sexp =
             | [Symbol "quote"; sexp] -> Literal (Quote sexp)
             | [Symbol "if"; cond; iftrue; iffalse] ->
                 If (build_ast cond, build_ast iftrue, build_ast iffalse)
+            | (Symbol "cond")::conditions -> cond_to_ifs conditions
             | [Symbol "and"; c1; c2] ->
                 And (build_ast c1, build_ast c2)
             | [Symbol "or"; c1; c2] ->

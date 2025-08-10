@@ -1,9 +1,13 @@
 open Types
 
 let basis =
-    let prim_plus = function
-        | [Fixnum a; Fixnum b] -> Fixnum (a + b)
-        | _ -> raise (TypeError "(+ int int)")
+    let numprim name op =
+        (name, function | [Fixnum a; Fixnum b] -> Fixnum (op a b)
+                | _ -> raise (TypeError ("(" ^ name ^ " int int)")))
+    in
+    let cmpprim name op =
+        (name, function | [Fixnum a; Fixnum b] -> Boolean (op a b)
+                | _ -> raise (TypeError ("(" ^ name ^ " int int)")))
     in
     let prim_pair = function
         | [a; b] -> Pair (a, b)
@@ -13,20 +17,48 @@ let basis =
         | [] -> Nil
         | a::b -> Pair (a, prim_list b)
     in
+    let prim_car = function
+        | [Pair (car, _)] -> car
+        | _ -> raise (TypeError "(car non-nil-pair)")
+    in
+    let prim_cdr = function
+        | [Pair (_, cdr)] -> cdr
+        | _ -> raise (TypeError "(cdr non-nil-pair)")
+    in
+    let prim_atomp = function
+        | [Pair _] -> Boolean false
+        | [_] -> Boolean true
+        | _ -> raise (TypeError "(atom? something)")
+    in
+    let prim_eqp = function
+        | [a; b] -> Boolean (a = b)
+        | _ -> raise (TypeError "(eq? a b)")
+    in
     let new_prim acc (name, func) =
         Env.bind (name, Primitive (name, func), acc)
     in
     List.fold_left new_prim [] [
-        ("+", prim_plus);
+        numprim "+" ( + );
+        numprim "-" ( - );
+        numprim "*" ( * );
+        numprim "/" ( / );
+        cmpprim "<" ( < );
+        cmpprim ">" ( > );
+        cmpprim "=" ( = );
         ("pair", prim_pair);
-        ("list", prim_list)
+        ("list", prim_list);
+        ("car", prim_car);
+        ("cdr", prim_cdr);
+        ("atom?", prim_atomp);
+        ("eq?", prim_eqp);
     ]
 
 let rec evalexp exp env =
     let evalapply f vs =
         match f with
         | Primitive (_, f) -> f vs
-        | Closure (ns, e, clenv) -> evalexp e (Env.bindlist ns vs clenv)
+        | Closure (ns, e, clenv) ->
+            evalexp e (Env.extend env (Env.bindlist ns vs clenv))
         | _ -> raise (TypeError "(apply prim '(args)) or (prim args)")
     in
     let rec ev = function

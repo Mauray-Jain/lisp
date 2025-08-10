@@ -21,3 +21,6 @@ let rec lookup = function
             | None -> raise (UnspecifiedValue n)
         end
     | (n, (_, _)::e) -> lookup (n, e)
+
+let extend oldenv newenv =
+    List.fold_right (fun (b, v) acc -> bindloc (b, v, acc)) newenv oldenv
