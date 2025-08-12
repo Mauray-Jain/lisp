@@ -42,6 +42,11 @@ let rec read_sexp stm =
             Pair (car, cdr)
     in
 
+    let rec eat_comment stm =
+        let c = read_char stm in
+        if c = '\n' then () else eat_comment stm
+    in
+
     eat_whitespace stm;
     let c = read_char stm in
     let peek_char = read_char stm in
@@ -60,5 +65,8 @@ let rec read_sexp stm =
         read_list stm
     else if c = '\'' then
         Quote (read_sexp stm)
+    else if c = ';' then
+        let () = eat_comment stm in
+        read_sexp stm
     else
         raise (SyntaxErr ("Unexpected character: " ^ (Char.escaped c)))
