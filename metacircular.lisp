@@ -1,0 +1,92 @@
+(define null. (x)
+  (eq? x '()))
+
+(define and. (x y)
+  (if x
+	(if y #t #f)
+	#f))
+
+(define not. (x)
+  (if x #f #t))
+
+(val cons pair)
+
+(define append. (x y)
+  (if (null. x)
+	y
+	(cons (car x)
+		  (append. (cdr x) y))))
+
+(define list. (x y)
+  (cons x (cons y '())))
+
+(define zip. (x y)
+  (cond ((and. (null. x) (null. y)) '())
+		((and. (not. (atom? x)) (not. (atom? y)))
+		 (cons (list. (car x) (car y))
+			   (zip. (cdr x) (cdr y))))))
+
+(define o (f g) (lambda (x) (f (g x))))
+(val caar (o car car))
+(val cadr (o car cdr))
+(val cadar (o car (o cdr car)))
+(val caddr (o car (o cdr cdr)))
+(val caddar (o car (o cdr (o cdr car))))
+
+(define lookup. (key alist)
+  (if (eq? (caar alist) key)
+	(cadar alist)
+	(lookup. key (cdr alist))))
+
+(define eval. (e env)
+  (cond
+	((sym? e) (lookup. e env))
+	((atom? e) e)
+	((atom? (car e))
+	 (cond
+	   ((eq? (car e) 'quote) (cadr e))
+	   ((eq? (car e) 'atom?) (atom? (eval. (cadr e)  env)))
+	   ((eq? (car e) 'eq?)   (eq?   (eval. (cadr e)  env)
+									(eval. (caddr e) env)))
+	   ((eq? (car e) 'car)   (car   (eval. (cadr e)  env)))
+	   ((eq? (car e) 'cdr)   (cdr   (eval. (cadr e)  env)))
+	   ((eq? (car e) 'cons)  (cons  (eval. (cadr e)  env)
+									(eval. (caddr e) env)))
+	   ((eq? (car e) '+)     (+     (eval. (cadr e) env)
+									(eval. (caddr e) env)))
+	   ((eq? (car e) '-)     (-     (eval. (cadr e) env)
+									(eval. (caddr e) env)))
+	   ((eq? (car e) '*)     (*     (eval. (cadr e) env)
+									(eval. (caddr e) env)))
+	   ((eq? (car e) '<)     (<     (eval. (cadr e) env)
+									(eval. (caddr e) env)))
+	   ((eq? (car e) 'cond)  (eval-cond. (cdr e) env))
+	   (else (eval. (cons (lookup. (car e) env)
+						  (cdr e))
+					env))))
+	((eq? (caar e) 'label)
+	 (eval. (cons (caddar e) (cdr e))
+			(cons (list. (cadar e) (car e)) env)))
+	((eq? (caar e) 'lambda)
+	 (eval. (caddar e)
+			(append. (zip. (cadar e)
+						   (map-eval. (cdr e) env))
+					 env)))))
+
+(define eval-cond. (c env)
+  (cond ((null. c) 'error)
+		((eval. (caar c) env) (eval. (cadar c) env))
+		(else (eval-cond. (cdr c) env))))
+
+(define map-eval. (exp args)
+  (cond ((null. exp) '())
+		(else (cons (eval. (car exp) env)
+					(map-eval. (cdr exp) env)))))
+
+
+(eval. '((label fact
+				(lambda (x)
+				  (cond ((< x 2) 1)
+						(#t (* x (fact (- x 1)))))))
+		 5)
+	   '())

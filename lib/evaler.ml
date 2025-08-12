@@ -25,6 +25,11 @@ let basis =
         | [Pair (_, cdr)] -> cdr
         | _ -> raise (TypeError "(cdr non-nil-pair)")
     in
+    let prim_symp = function
+        | [Symbol _] -> Boolean true
+        | [_] -> Boolean false
+        | _ -> raise (TypeError "(sym? single-arg)")
+    in
     let prim_atomp = function
         | [Pair _] -> Boolean false
         | [_] -> Boolean true
@@ -49,6 +54,7 @@ let basis =
         ("list", prim_list);
         ("car", prim_car);
         ("cdr", prim_cdr);
+        ("sym?", prim_symp);
         ("atom?", prim_atomp);
         ("eq?", prim_eqp);
     ]
