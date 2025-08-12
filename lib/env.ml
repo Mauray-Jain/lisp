@@ -5,9 +5,12 @@ type 'a env = (string * 'a option ref) list
 
 let bind (n, v, e) = (n, ref (Some v))::e
 
-let mkloc () = ref None
+let mkloc _ = ref None
 
 let bindloc : string * 'a option ref * 'a env -> 'a env = fun (n, vor, e) -> (n, vor)::e
+
+let bindloclist ns vs env =
+    List.fold_left2 (fun acc n v -> bindloc (n, v, acc)) env ns vs
 
 let bindlist ns vs env =
     List.fold_left2 (fun acc n v -> bind (n, v, acc)) env ns vs

@@ -9,6 +9,7 @@ type lobject =
     | Closure of name list * exp * value Env.env
 and value = lobject
 and name = string
+and let_kind = LET | LETSTAR | LETREC
 and exp =
     | Literal of value          (* self evaluating *)
     | Var of name               (* variable name *)
@@ -18,6 +19,7 @@ and exp =
     | Apply of exp * exp        (* primitive procedure or closure *)
     | Call of exp * exp list    (* primitive procedure or closure *)
     | Lambda of name list * exp (* lambda *)
+    | Let of let_kind * (name * exp) list * exp (* let statements *)
     | Defexp of def             (* modifies env *)
 and def =
     | Val of name * exp

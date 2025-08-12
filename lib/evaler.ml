@@ -63,10 +63,10 @@ let rec evalexp exp env =
     let evalapply f vs =
         match f with
         | Primitive (_, f) -> f vs
-        | Closure (ns, e, clenv) ->
-            evalexp e (Env.extend env (Env.bindlist ns vs clenv))
+        | Closure (ns, e, clenv) -> evalexp e (Env.bindlist ns vs clenv)
         | _ -> raise (TypeError "(apply prim '(args)) or (prim args)")
     in
+    let unzip ls = (List.map fst ls, List.map snd ls) in
     let rec ev = function
         | Literal Quote q -> q
         | Literal l -> l
@@ -90,6 +90,18 @@ let rec evalexp exp env =
         | Call (Var "env", []) -> env_to_val env
         | Call (fn, args) -> evalapply (ev fn) (List.map ev args)
         | Lambda (ns, body) -> Closure (ns, body, env)
+        | Let (LET, bs, body) ->
+            let evbinding (n, e) = n, ref (Some (ev e)) in
+            evalexp body (Env.extend (List.map evbinding bs) env)
+        | Let (LETSTAR, bs, body) ->
+            let evbinding acc (n, e) = Env.bind (n, evalexp e acc, acc) in
+            evalexp body (List.fold_left evbinding env bs)
+        | Let (LETREC, bs, body) ->
+            let names, values = unzip bs in
+            let env' = Env.bindloclist names (List.map Env.mkloc values) env in
+            let updates = List.map (fun (n, e) -> n, Some (evalexp e env')) bs in
+            let () = List.iter (fun (n, v) -> (List.assoc n env') := v) updates in
+            evalexp body env'
         | Defexp _ -> raise ThisCan'tHappenError
     in
     ev exp
