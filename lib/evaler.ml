@@ -39,6 +39,24 @@ let basis =
         | [a; b] -> Boolean (a = b)
         | _ -> raise (TypeError "(eq? a b)")
     in
+    let prim_getchar = function
+        | [] ->
+            (try Fixnum (int_of_char @@ input_char stdin)
+            with End_of_file -> Fixnum (-1))
+        | _ -> raise (TypeError "(getchar)")
+    in
+    let prim_print = function
+        | [v] -> let () = print_string @@ Ast.string_val v in Symbol "ok"
+        | _ -> raise (TypeError "(print val)")
+    in
+    let prim_itoc = function
+        | [Fixnum i] -> Symbol (char_of_int i |> String.make 1)
+        | _ -> raise (TypeError "(itoc int)")
+    in
+    let prim_cat = function
+        | [Symbol a; Symbol b] -> Symbol (a ^ b)
+        | _ -> raise (TypeError "(cat sym sym)")
+    in
     let new_prim acc (name, func) =
         Env.bind (name, Primitive (name, func), acc)
     in
@@ -57,6 +75,10 @@ let basis =
         ("sym?", prim_symp);
         ("atom?", prim_atomp);
         ("eq?", prim_eqp);
+        ("getchar", prim_getchar);
+        ("print", prim_print);
+        ("itoc", prim_itoc);
+        ("cat", prim_cat);
     ]
 
 let rec evalexp exp env =
